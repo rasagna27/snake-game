@@ -3,41 +3,28 @@ import { useEffect, useState } from "react";
 const gridSize = 20;
 const initialSnake = [[10, 10]];
 
-const eatSound = new Audio("https://www.soundjay.com/buttons/sounds/button-4.mp3");
-const gameOverSound = new Audio("https://www.soundjay.com/buttons/sounds/button-10.mp3");
-
 export default function App() {
   const [snake, setSnake] = useState(initialSnake);
   const [food, setFood] = useState([5, 5]);
   const [direction, setDirection] = useState("RIGHT");
   const [gameOver, setGameOver] = useState(false);
   const [score, setScore] = useState(0);
-  const [speed, setSpeed] = useState(200);
-
-  // Prevent reverse movement
-  const changeDirection = (newDir) => {
-    if (
-      (direction === "UP" && newDir === "DOWN") ||
-      (direction === "DOWN" && newDir === "UP") ||
-      (direction === "LEFT" && newDir === "RIGHT") ||
-      (direction === "RIGHT" && newDir === "LEFT")
-    ) return;
-
-    setDirection(newDir);
-  };
+  const [highScore, setHighScore] = useState(
+    Number(localStorage.getItem("highScore")) || 0
+  );
 
   // Keyboard control
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === "ArrowUp") changeDirection("UP");
-      if (e.key === "ArrowDown") changeDirection("DOWN");
-      if (e.key === "ArrowLeft") changeDirection("LEFT");
-      if (e.key === "ArrowRight") changeDirection("RIGHT");
+      if (e.key === "ArrowUp") setDirection("UP");
+      if (e.key === "ArrowDown") setDirection("DOWN");
+      if (e.key === "ArrowLeft") setDirection("LEFT");
+      if (e.key === "ArrowRight") setDirection("RIGHT");
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [direction]);
+  }, []);
 
   // Game loop
   useEffect(() => {
@@ -45,7 +32,7 @@ export default function App() {
 
     const interval = setInterval(() => {
       moveSnake();
-    }, speed);
+    }, 150);
 
     return () => clearInterval(interval);
   });
@@ -66,16 +53,14 @@ export default function App() {
       head[1] < 0 ||
       head[1] >= gridSize
     ) {
-      gameOverSound.play();
-      setGameOver(true);
+      endGame();
       return;
     }
 
     // Self collision
     for (let segment of newSnake) {
       if (segment[0] === head[0] && segment[1] === head[1]) {
-        gameOverSound.play();
-        setGameOver(true);
+        endGame();
         return;
       }
     }
@@ -84,9 +69,7 @@ export default function App() {
 
     // Eat food
     if (head[0] === food[0] && head[1] === food[1]) {
-      eatSound.play();
       setScore((s) => s + 10);
-      setSpeed((prev) => Math.max(prev - 5, 80)); // speed up
 
       setFood([
         Math.floor(Math.random() * gridSize),
@@ -99,50 +82,81 @@ export default function App() {
     setSnake(newSnake);
   };
 
+  const endGame = () => {
+    setGameOver(true);
+
+    if (score > highScore) {
+      localStorage.setItem("highScore", score);
+      setHighScore(score);
+    }
+  };
+
   const restart = () => {
     setSnake(initialSnake);
     setFood([5, 5]);
     setDirection("RIGHT");
     setGameOver(false);
     setScore(0);
-    setSpeed(200);
   };
 
   return (
     <div
       style={{
         textAlign: "center",
-        background: "black",
-        color: "lime",
+        background: "radial-gradient(circle, #0f2027, #203a43, #000)",
         minHeight: "100vh",
+        color: "white",
         padding: "20px",
         fontFamily: "monospace"
       }}
     >
-      <h1>🐍 Snake Game</h1>
-      <h2>Score: {score}</h2>
+      <h1 style={{ color: "lime", textShadow: "0 0 10px lime" }}>
+        🐍 Snake Game
+      </h1>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "20px",
+          marginBottom: "10px",
+        }}
+      >
+        <h3>Score: {score}</h3>
+        <h3>🏆 High: {highScore}</h3>
+      </div>
 
       <button
         onClick={restart}
         style={{
-          padding: "10px",
+          padding: "10px 20px",
           background: "lime",
           border: "none",
-          cursor: "pointer"
+          borderRadius: "5px",
+          cursor: "pointer",
+          fontWeight: "bold"
         }}
       >
         Restart
       </button>
 
-      {gameOver && <h2 style={{ color: "red" }}>Game Over 💀</h2>}
+      {gameOver && (
+        <h2 style={{ color: "red", marginTop: "10px" }}>
+          Game Over 💀
+        </h2>
+      )}
 
+      {/* GAME BOARD */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${gridSize}, 20px)`,
+          gridTemplateColumns: `repeat(${gridSize}, 22px)`,
           justifyContent: "center",
           marginTop: "20px",
-          boxShadow: "0 0 20px lime"
+          boxShadow: "0 0 20px lime",
+          padding: "5px",
+          background: "#111",
+          borderRadius: "10px"
         }}
       >
         {[...Array(gridSize * gridSize)].map((_, i) => {
@@ -152,19 +166,30 @@ export default function App() {
           const isSnake = snake.some(
             ([sx, sy]) => sx === x && sy === y
           );
+          const isHead =
+            snake[0][0] === x && snake[0][1] === y;
+
           const isFood = food[0] === x && food[1] === y;
 
           return (
             <div
               key={i}
               style={{
-                width: "20px",
-                height: "20px",
-                background: isSnake
+                width: "22px",
+                height: "22px",
+                background: isHead
+                  ? "#00ffcc"
+                  : isSnake
                   ? "lime"
                   : isFood
                   ? "red"
-                  : "black",
+                  : "#111",
+                borderRadius: isFood ? "50%" : "4px",
+                boxShadow: isFood
+                  ? "0 0 10px red"
+                  : isSnake
+                  ? "0 0 5px lime"
+                  : "none",
                 border: "1px solid #222"
               }}
             />
