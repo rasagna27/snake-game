@@ -3,24 +3,41 @@ import { useEffect, useState } from "react";
 const gridSize = 20;
 const initialSnake = [[10, 10]];
 
+const eatSound = new Audio("https://www.soundjay.com/buttons/sounds/button-4.mp3");
+const gameOverSound = new Audio("https://www.soundjay.com/buttons/sounds/button-10.mp3");
+
 export default function App() {
   const [snake, setSnake] = useState(initialSnake);
   const [food, setFood] = useState([5, 5]);
   const [direction, setDirection] = useState("RIGHT");
   const [gameOver, setGameOver] = useState(false);
+  const [score, setScore] = useState(0);
+  const [speed, setSpeed] = useState(200);
 
-  // Keyboard controls
+  // Prevent reverse movement
+  const changeDirection = (newDir) => {
+    if (
+      (direction === "UP" && newDir === "DOWN") ||
+      (direction === "DOWN" && newDir === "UP") ||
+      (direction === "LEFT" && newDir === "RIGHT") ||
+      (direction === "RIGHT" && newDir === "LEFT")
+    ) return;
+
+    setDirection(newDir);
+  };
+
+  // Keyboard control
   useEffect(() => {
     const handleKey = (e) => {
-      if (e.key === "ArrowUp") setDirection("UP");
-      if (e.key === "ArrowDown") setDirection("DOWN");
-      if (e.key === "ArrowLeft") setDirection("LEFT");
-      if (e.key === "ArrowRight") setDirection("RIGHT");
+      if (e.key === "ArrowUp") changeDirection("UP");
+      if (e.key === "ArrowDown") changeDirection("DOWN");
+      if (e.key === "ArrowLeft") changeDirection("LEFT");
+      if (e.key === "ArrowRight") changeDirection("RIGHT");
     };
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [direction]);
 
   // Game loop
   useEffect(() => {
@@ -28,7 +45,7 @@ export default function App() {
 
     const interval = setInterval(() => {
       moveSnake();
-    }, 200);
+    }, speed);
 
     return () => clearInterval(interval);
   });
@@ -49,6 +66,7 @@ export default function App() {
       head[1] < 0 ||
       head[1] >= gridSize
     ) {
+      gameOverSound.play();
       setGameOver(true);
       return;
     }
@@ -56,6 +74,7 @@ export default function App() {
     // Self collision
     for (let segment of newSnake) {
       if (segment[0] === head[0] && segment[1] === head[1]) {
+        gameOverSound.play();
         setGameOver(true);
         return;
       }
@@ -65,6 +84,10 @@ export default function App() {
 
     // Eat food
     if (head[0] === food[0] && head[1] === food[1]) {
+      eatSound.play();
+      setScore((s) => s + 10);
+      setSpeed((prev) => Math.max(prev - 5, 80)); // speed up
+
       setFood([
         Math.floor(Math.random() * gridSize),
         Math.floor(Math.random() * gridSize),
@@ -81,14 +104,37 @@ export default function App() {
     setFood([5, 5]);
     setDirection("RIGHT");
     setGameOver(false);
+    setScore(0);
+    setSpeed(200);
   };
 
   return (
-    <div style={{ textAlign: "center" }}>
-      <h1>Snake Game 🐍</h1>
-      <button onClick={restart}>Restart</button>
+    <div
+      style={{
+        textAlign: "center",
+        background: "black",
+        color: "lime",
+        minHeight: "100vh",
+        padding: "20px",
+        fontFamily: "monospace"
+      }}
+    >
+      <h1>🐍 Snake Game</h1>
+      <h2>Score: {score}</h2>
 
-      {gameOver && <h2>Game Over 💀</h2>}
+      <button
+        onClick={restart}
+        style={{
+          padding: "10px",
+          background: "lime",
+          border: "none",
+          cursor: "pointer"
+        }}
+      >
+        Restart
+      </button>
+
+      {gameOver && <h2 style={{ color: "red" }}>Game Over 💀</h2>}
 
       <div
         style={{
@@ -96,6 +142,7 @@ export default function App() {
           gridTemplateColumns: `repeat(${gridSize}, 20px)`,
           justifyContent: "center",
           marginTop: "20px",
+          boxShadow: "0 0 20px lime"
         }}
       >
         {[...Array(gridSize * gridSize)].map((_, i) => {
@@ -113,12 +160,12 @@ export default function App() {
               style={{
                 width: "20px",
                 height: "20px",
-                border: "1px solid #ddd",
                 background: isSnake
-                  ? "green"
+                  ? "lime"
                   : isFood
                   ? "red"
-                  : "white",
+                  : "black",
+                border: "1px solid #222"
               }}
             />
           );
