@@ -155,7 +155,7 @@ export default function App() {
           marginTop: "20px",
           boxShadow: "0 0 20px lime",
           padding: "5px",
-          background: "#0cf063",
+          background: "#0cf06300",
           borderRadius: "10px"
         }}
       >
